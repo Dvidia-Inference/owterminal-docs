@@ -1,42 +1,45 @@
 # Privacy
 
-How OpenWeights Terminal handles a prompt, what it keeps, and what it cannot protect. The site version is [owterminal.com/privacy](https://owterminal.com/privacy). Updated 7 October 2026.
+How OpenWeights Terminal handles a prompt, what it keeps, and what it cannot protect. The site version is [owterminal.com/privacy](https://owterminal.com/privacy). Updated 9 October 2026.
 
-In short: there is no chat log. A prompt is erased from our database when a host picks up the job, and a reply at the first cleanup 10 minutes after the job finishes. The host that runs the job reads the prompt in plain text. If something must never leave your device, run the model on your own machine.
+In short: we keep no chat history. A prompt is deleted from our live database when a host picks up the job, and a reply at the first cleanup 10 minutes after the job finishes. Older copies can remain in database logs and backups. Cloudflare and our server read prompts and replies in transit, and the host that runs the job reads the prompt in plain text. If something must never leave your device, run the model on your own machine. Where this is going: the [privacy thesis](privacy/README.md).
 
 ## Threat model
 
 **Protects against**
 
-- A leak or backup of our database revealing a prompt or reply after it has been erased.
+- A leak of our live database revealing a prompt or reply after it has been deleted.
 - Anyone with database access, us included, reading a sealed prompt while it waits for a host (see [Prompts sealed at rest](#prompts-sealed-at-rest)).
-- A shielded ZEC payment being linked to who you are.
+- A shielded ZEC payment appearing on a public ledger. We and Cloudflare still see the IP address that asks for the quote, and which key it credits.
 
 **Does not protect against**
 
-- **The host that runs the job.** It must read the prompt to answer it. We cannot see inside a host's machine or stop it from logging what it runs. There is no hardware attestation (TEE).
-- **Our server while a request is in flight.** The prompt passes through it on the way to the host.
+- **The host that runs the job.** It must read the prompt to answer it. Hosts are not vetted: anyone can run one, and a new host can get jobs right away. We cannot see inside a host's machine or stop it from logging what it runs. There is no hardware attestation (TEE).
+- **Cloudflare and our server while a request is in flight.** Cloudflare, our network provider, terminates HTTPS, and the prompt and reply pass through our server.
 - **Metadata.** The model, token counts, the prompt's length, price, timing and which host ran a job are never sealed.
-- **Replies before they are erased.** A reply is stored as plain text until cleanup erases it, 10 minutes or more after the job finishes.
+- **Replies before they are deleted.** A reply is stored as plain text until cleanup deletes it, 10 minutes or more after the job finishes.
+- **Database logs and backups.** Deleting clears the live database. Older copies can remain in database logs and backups.
 
-## What is erased, and when
+## What is deleted, and when
 
-| | Erased |
+| | Deleted |
 |---|---|
 | Prompt waiting for a host | When a host picks up the job |
-| Job no host picks up | At the first cleanup after 3 minutes: the job expires, its prompt is erased and the caller's hold is returned |
+| Job no host picks up | At the first cleanup after 3 minutes: the job expires, its prompt is deleted and the caller's hold is returned |
 | Finished reply | At the first cleanup 10 minutes after the job finishes, read or not |
-| Guest chat | When you close the tab |
+| Guest chat in your tab | When you close the tab. What it sent follows the rows above |
 
 Cleanup runs with pool traffic: a new job, a read, or a host checking for work. With hosts online that is about every 15 seconds. In an idle pool it can run later.
 
-No chat logs, no transcripts. Request bodies are not logged: no request logging is configured, and the API code does not log prompts. The API runs one message per call and keeps no conversation history.
+We keep no chat history or transcripts. Request bodies are not logged: no request logging is configured, and the API code does not log prompts. The API runs one message per call and keeps no conversation history.
 
 ## What we keep
 
-Each job leaves a billing record: the API key id, the model, token counts, the prompt's length, timestamps, status, and which host ran it. Once the text is erased, that record holds neither the prompt nor the reply. Payments and payouts are recorded for the ledger.
+Each job leaves a billing record: the API key id, the model, token counts, the prompt's length, timestamps, status, and which host ran it. Once the text is deleted, that record holds neither the prompt nor the reply. Payments and payouts are recorded for the ledger.
 
-To stop abuse, the guest chat counts requests per IP address in server memory. That count is not written to the database.
+If you sign in (X or GitHub), we store your profile name, picture and email (when the provider gives one), and each session's IP address and browser.
+
+To stop abuse, our server counts anonymous requests per IP address in memory: guest chats, new keys and hosts, quotes and jobs. Those counts are not written to the database.
 
 ## What the host sees
 
@@ -44,7 +47,7 @@ The host reads the prompt in plain text while the job runs, and writes the reply
 
 ## What our server sees
 
-Our server holds a prompt in memory for the length of the request that queues it, because it has to store or seal it. It does not log the prompt or write it anywhere except that job's record, and it erases it there as above. It stores the reply until it is erased.
+Our server holds a prompt in memory for the length of the request that queues it, because it has to store or seal it. It does not log the prompt or write it anywhere except that job's record, and it deletes it there as above. It stores the reply until it is deleted.
 
 ## Prompts sealed at rest
 
@@ -61,9 +64,9 @@ Sealing protects the database, not the host: the host that takes the job decrypt
 
 Every AES-GCM nonce is 12 random bytes. Each key encrypts exactly one message, so random nonces are safe.
 
-**Keys.** Each host makes its own X25519 key pair on its own machine. We only ever see the public key. The `ow` CLI keeps the pair in `~/.ow/enckey.json`, readable only by its owner; a browser host keeps it in that browser's storage.
+**Keys.** Each host makes its own X25519 key pair on its own machine. We only ever see the public key. That rests on the page and the CLI we serve; signed releases are on the [roadmap](privacy/ROADMAP.md). The `ow` CLI keeps the pair in `~/.ow/enckey.json`, readable only by its owner; a browser host keeps it in that browser's storage.
 
-**Who can claim.** Only a host the job was sealed for can claim it. The ciphertext is erased from the database when the job is claimed or expires. A host that changes or loses its key cannot decrypt jobs sealed to its old key: those jobs fail or expire, and the caller's hold is returned.
+**Who can claim.** Only a host the job was sealed for can claim it. The ciphertext is deleted from the database when the job is claimed or expires. A host that changes or loses its key cannot decrypt jobs sealed to its old key: those jobs fail or expire, and the caller's hold is returned.
 
 The test prompts we send to check hosts are synthetic (random numbers, words and codes). They hold no caller text and are not sealed.
 
@@ -75,7 +78,7 @@ Before sending, it replaces emails, phone numbers, card numbers, IBANs, US Socia
 
 ## Paying without an identity
 
-API keys need no account: no email, name or phone number. Signing in with X is optional and only syncs and recovers your keys. Shielded ZEC payments are matched by a memo, not by who you are. USDC on Base is public on chain; use ZEC if you want the payment unlinked from you. Payment privacy is separate from prompt privacy: the host still reads the prompt.
+API keys need no account: no email, name or phone number. Signing in with X or GitHub is optional. It syncs and recovers your keys, and links them, with their jobs and payments, to that account. Shielded ZEC payments are matched by a memo, not by who you are. USDC on Base is public on chain; use ZEC if you want the payment unlinked from you. Payment privacy is separate from prompt privacy: the host still reads the prompt.
 
 ## Host relay: not enabled yet
 
@@ -83,6 +86,6 @@ The `ow` CLI contains an optional relay connection (`OW_RELAY=1`) for faster job
 
 ## Check it yourself
 
-The host side is public. The `ow` CLI, served at [owterminal.com/ow.mjs](https://owterminal.com/ow.mjs) and mirrored to [dvidia-inference/ow](https://github.com/dvidia-inference/ow), shows how a host makes its key, decrypts a sealed job, and what it sends back.
+The sealing code our server and browser hosts run is public, with its tests: [privacy/reference](privacy/reference/). The `ow` CLI is public too: served at [owterminal.com/ow.mjs](https://owterminal.com/ow.mjs) and mirrored to [dvidia-inference/ow](https://github.com/dvidia-inference/ow), it shows how a host makes its key, decrypts a sealed job, and what it sends back.
 
 Questions or corrections: open an issue. Security problems: see [SECURITY.md](SECURITY.md).

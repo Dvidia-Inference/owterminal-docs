@@ -10,7 +10,7 @@ flowchart LR
   Desk -->|reply| App
 ```
 
-Our server never decides what the model says. It holds the job, erases the prompt when a host picks it up, and keeps the ledger.
+Our server never decides what the model says. It holds the job, deletes the prompt from its live database when a host picks it up, and keeps the ledger.
 
 ## Calling a model
 

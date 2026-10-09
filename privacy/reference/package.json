@@ -1,0 +1,18 @@
+{
+  "name": "owterminal-prompt-seal",
+  "private": true,
+  "description": "Reference copy of the OpenWeights Terminal prompt-sealing code and its tests",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test prompt-seal.test.ts"
+  },
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "1.9.1",
+    "@noble/hashes": "2.4.0"
+  }
+}

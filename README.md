@@ -6,7 +6,8 @@ This repository holds the public docs. It is a mirror: a script copies one folde
 
 | | |
 |---|---|
-| [PRIVACY.md](PRIVACY.md) | What is erased, what is kept, who can read a prompt, and how prompts are sealed at rest |
+| [PRIVACY.md](PRIVACY.md) | What is deleted, what is kept, who can read a prompt, and how prompts are sealed at rest |
+| [privacy/](privacy/README.md) | Our privacy thesis, how it works today, the roadmap, and the sealing code with its tests |
 | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) | Calling a model: keys, prices, deposits, and how the pool picks a machine |
 | [HOSTING.md](HOSTING.md) | Hosting a model: join, link to your account, verification, payouts |
 | [SECURITY.md](SECURITY.md) | Reporting a vulnerability |
